@@ -2,6 +2,18 @@
 
 This project is a simple game implemented using Akka Framework and Scala.
 
+NOTE: This is NOT a full solution, I'll continue playing around with it. Publishing it in this state since I promised Anna Orlova that I'll get something done for her this week. And, as I already told Stanislav Kursish, my Scala is rusty, haven't worked on anything in two years, so, the amount of time I had available this week was not enough to finish everything.
+
+## TODO
+
+- Write tests for WebSocket functionality.
+- Implement `request.play` functionality.
+- Implement `response.results` functionality.
+- Finish `request.ping` / `response.pong` functionality.
+- Provide a list of winners based on their game results.
+- Clean up and polish the overal results: divide into multiple files, add comments etc.
+
+
 ## Overview
 
 The game includes the following functionality:
