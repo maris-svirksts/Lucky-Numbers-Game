@@ -1,6 +1,6 @@
 # Lucky Numbers Game
 
-This project is a simple game implemented using Play Framework and Scala.
+This project is a simple game implemented using Akka Framework and Scala.
 
 ## Overview
 
@@ -20,7 +20,7 @@ The game uses WebSocket communication for handling game logic:
 
 1. Ensure you have sbt and Scala installed.
 2. Run `sbt run` in the terminal.
-3. The application will start on `localhost:9000`.
+3. The application will start on `localhost:8080`.
 
 ## How to Test
 
