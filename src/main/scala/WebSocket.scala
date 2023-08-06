@@ -6,14 +6,37 @@ import akka.http.scaladsl.server.Directives._
 import akka.stream.scaladsl.{Flow, Sink, Source}
 import spray.json._
 import scala.concurrent.{ExecutionContextExecutor, Future}
+import LuckyNumbersGame._
+import scala.util.{Failure, Success}
 
 
 // Data structures
-case class PingMessage(id: Int, timestamp: Long)
-case class PongMessage(requestId: Int, requestAt: Long, timestamp: Long)
 case class PlayMessage(players: Int)
 case class Result(position: Int, player: String, number: Int, result: Int)
 case class ResultsMessage(results: List[Result])
+
+case class PingMessage(id: Int, timestamp: Long) {
+  def toJson: JsValue = {
+    val jsonMap = Map(
+      "message_type" -> JsString("request.ping"),
+      "id" -> JsNumber(id),
+      "timestamp" -> JsNumber(timestamp)
+    )
+    JsObject(jsonMap)
+  }
+}
+
+case class PongMessage(requestId: Int, requestAt: Long, timestamp: Long) {
+  def toJson: JsValue = {
+    val jsonMap = Map(
+      "message_type" -> JsString("response.pong"),
+      "request_id" -> JsNumber(requestId),
+      "request_at" -> JsNumber(requestAt),
+      "timestamp" -> JsNumber(timestamp)
+    )
+    JsObject(jsonMap)
+  }
+}
 
 // Json formats
 object JsonFormats extends DefaultJsonProtocol {
@@ -30,7 +53,11 @@ object WebSocketServer extends App {
   implicit val system: ActorSystem = ActorSystem("WebSocketServer")
   implicit val executionContext: ExecutionContextExecutor = system.dispatcher
 
-  // WebSocket handler
+  // Define constants
+  val PingMessageType = "request.ping"
+  val PlayMessageType = "request.play"
+  val PongMessageType = "response.pong"
+
   def websocketFlow: Flow[Message, Message, NotUsed] = {
     Flow[Message]
       .mapConcat {
@@ -38,13 +65,15 @@ object WebSocketServer extends App {
           text.parseJson match {
             case JsObject(fields) =>
               fields("message_type") match {
-                case JsString("request.play") =>
+                case JsString(PlayMessageType) =>
                   val playMessage = text.parseJson.convertTo[PlayMessage]
                   // TODO: Handle play request
                   Nil
-                case JsString("request.ping") =>
+                case JsString(PingMessageType) =>
                   val pingMessage = text.parseJson.convertTo[PingMessage]
-                  List(TextMessage(PongMessage(pingMessage.id, pingMessage.timestamp, System.currentTimeMillis()).toJson.compactPrint))
+                  val pongMessage = PongMessage(pingMessage.id, pingMessage.timestamp, System.currentTimeMillis())
+                  println(s"Pong message data: $pongMessage")
+                  List(TextMessage(pongMessage.toJson.compactPrint))
                 case _ =>
                   println(s"Unknown message type: $text")
                   Nil
@@ -63,10 +92,11 @@ object WebSocketServer extends App {
   }
 
   val server = Http().newServerAt("localhost", 8080).bind(route)
-  server.map { _ =>
-    println("Successfully started on localhost:8080 ")
-  } recover { case ex =>
-    println("Failed to start the server due to: " + ex.getMessage)
+  server.onComplete {
+    case Success(_) =>
+      println("Successfully started on localhost:8080 ")
+    case Failure(ex) =>
+      println("Failed to start the server due to: " + ex.getMessage)
   }
 
   val printSink: Sink[Message, Future[Done]] = Sink.foreach[Message] {
@@ -79,12 +109,10 @@ object WebSocketServer extends App {
   }
 
 
-  val sendSource: Source[Message, NotUsed] = Source.single(TextMessage(PingMessage(1, System.currentTimeMillis()).toJson.compactPrint))
-
   val websocketFlowClient = Http().webSocketClientFlow(WebSocketRequest("ws://localhost:8080/game"))
 
-  val flow = sendSource.via(websocketFlowClient).to(printSink)
-
-  flow.run()
-
+  val pingRequest = PingMessage(id = 1, System.currentTimeMillis())
+  val sendPingSource: Source[Message, NotUsed] = Source.single(TextMessage(pingRequest.toJson.compactPrint))
+  val pingFlow = sendPingSource.via(websocketFlowClient).to(printSink)
+  pingFlow.run()
 }
