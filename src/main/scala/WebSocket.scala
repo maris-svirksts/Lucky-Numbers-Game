@@ -64,13 +64,15 @@ object WebSocketServer extends App {
     Flow[Message].mapConcat {
       case TextMessage.Strict(text) =>
         try {
-          text.parseJson.asJsObject.getFields("message_type") match {
+          val json = text.parseJson.asJsObject
+
+          json.getFields("message_type") match {
             case Seq(JsString(PlayMessageType)) =>
-              val playMessage = text.parseJson.convertTo[PlayMessage]
+              val playMessage = json.convertTo[PlayMessage]
               // TODO: Handle play request
               Nil
             case Seq(JsString(PingMessageType)) =>
-              val pingMessage = text.parseJson.convertTo[PingMessage]
+              val pingMessage = json.convertTo[PingMessage]
               val pongMessage = PongMessage(pingMessage.id, pingMessage.timestamp, System.currentTimeMillis())
               logger.info(s"Pong message data: $pongMessage")
               List(TextMessage(pongMessage.toJson.compactPrint))
@@ -101,22 +103,6 @@ object WebSocketServer extends App {
     case Success(_) =>
       logger.info("Successfully started on localhost:8080 ")
     case Failure(ex) =>
-      logger.error("Failed to start the server due to: ", ex)
+      logger.error(s"Failed to start the server due to: ${ex.getMessage}", ex)
   }
-
-  val printSink: Sink[Message, Future[Done]] = Sink.foreach[Message] {
-    case message: TextMessage.Strict =>
-      logger.info(message.text)
-    case _: TextMessage.Streamed =>
-      logger.warn("Received a Streamed TextMessage, ignoring it.")
-    case _: BinaryMessage =>
-      logger.warn("Received a BinaryMessage, ignoring it.")
-  }
-
-  val websocketFlowClient = Http().webSocketClientFlow(WebSocketRequest("ws://localhost:8080/game"))
-
-  val pingRequest = PingMessage(id = 1, System.currentTimeMillis())
-  val sendPingSource: Source[Message, NotUsed] = Source.single(TextMessage(pingRequest.toJson.compactPrint))
-  val pingFlow = sendPingSource.via(websocketFlowClient).to(printSink)
-  pingFlow.run()
 }
