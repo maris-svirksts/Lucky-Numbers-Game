@@ -1,14 +1,15 @@
 import akka.{Done, NotUsed}
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.model.ws.{Message, TextMessage, WebSocketRequest, BinaryMessage}
+import akka.http.scaladsl.model.ws.{Message, TextMessage, BinaryMessage}
 import akka.http.scaladsl.server.Directives._
 import akka.stream.scaladsl.{Flow, Sink, Source}
 import spray.json._
-import scala.concurrent.{ExecutionContextExecutor, Future}
+import scala.concurrent.{ExecutionContextExecutor, Future, Await}
 import LuckyNumbersGame._
 import scala.util.{Failure, Success}
 import org.slf4j.LoggerFactory
+import scala.concurrent.duration._
 
 // Data structures
 case class PlayMessage(players: Int)
@@ -104,5 +105,19 @@ object WebSocketServer extends App {
       logger.info("Successfully started on localhost:8080 ")
     case Failure(ex) =>
       logger.error(s"Failed to start the server due to: ${ex.getMessage}", ex)
+  }
+
+  // Trap termination signals to trigger shutdown
+  scala.sys.addShutdownHook {
+    logger.info("Shutting down server...")
+    
+    // Unbind the server and stop accepting new connections
+    server.flatMap(_.unbind()).onComplete(_ => logger.info("Server unbound."))
+    
+    // Terminate the actor system, waiting for any running actors to finish
+    val termination = system.terminate()
+    Await.result(termination, 30.seconds)
+
+    logger.info("Server shutdown complete.")
   }
 }
