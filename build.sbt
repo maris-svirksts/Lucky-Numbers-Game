@@ -9,7 +9,8 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-http" % "10.5.2",
   "com.typesafe.akka" %% "akka-actor" % "2.8.3",
   "com.typesafe.akka" %% "akka-http-spray-json" % "10.5.2",
-  "com.typesafe.akka" %% "akka-stream" % "2.8.3"
+  "com.typesafe.akka" %% "akka-stream" % "2.8.3",
+  "ch.qos.logback" % "logback-classic" % "1.3.9"
 )
 libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-testkit" % "2.8.3" % Test,
