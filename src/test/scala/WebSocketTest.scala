@@ -5,9 +5,9 @@ import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.testkit.{ScalatestRouteTest, WSProbe}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
-import akka.event.Logging
 import spray.json._
 import JsonFormats._
+import org.slf4j.LoggerFactory
 
 
 class WebSocketServerSpec extends AnyWordSpec with Matchers with ScalatestRouteTest {
@@ -29,13 +29,13 @@ class WebSocketServerSpec extends AnyWordSpec with Matchers with ScalatestRouteT
             val messageToSend = TextMessage(pingMessage.toJson.compactPrint)
 
             // Logging the sent message
-            val log = Logging(system, this.getClass)
-            log.info(s"Sending message: $messageToSend")
+            val logger = LoggerFactory.getLogger(getClass)
+            logger.info(s"Sending message: $messageToSend")
 
             wsClient.sendMessage(messageToSend)
             wsClient.expectMessage() match {
             case TextMessage.Strict(text) =>
-                log.info(s"Received message: $text")
+                logger.info(s"Received message: $text")
                 val receivedPong = text.parseJson.convertTo[PongMessage]
 
                 receivedPong.requestId shouldBe pingMessage.id
