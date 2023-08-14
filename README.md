@@ -9,7 +9,6 @@ NOTE: This is NOT a full solution, I'll continue playing around with it. Publish
 - Write tests for WebSocket functionality.
 - Implement `request.play` functionality.
 - Implement `response.results` functionality.
-- Finish `request.ping` / `response.pong` functionality.
 - Provide a list of winners based on their game results.
 - Clean up and polish the overal results: divide into multiple files, add comments etc.
 

@@ -42,10 +42,14 @@ case class PongMessage(requestId: Int, requestAt: Long, timestamp: Long) {
 // Json formats
 object JsonFormats extends DefaultJsonProtocol {
   implicit val pingFormat = jsonFormat2(PingMessage)
-  implicit val pongFormat = jsonFormat3(PongMessage)
   implicit val playFormat = jsonFormat1(PlayMessage)
   implicit val resultFormat = jsonFormat4(Result)
   implicit val resultsFormat = jsonFormat1(ResultsMessage)
+
+  implicit val pongFormat = jsonFormat(
+    { (request_id: Int, request_at: Long, timestamp: Long) => PongMessage(request_id, request_at, timestamp) },
+    "request_id", "request_at", "timestamp"
+  )
 }
 
 import JsonFormats._
@@ -54,25 +58,24 @@ object WebSocketServer extends App {
   implicit val system: ActorSystem = ActorSystem("WebSocketServer")
   implicit val executionContext: ExecutionContextExecutor = system.dispatcher
 
-  // Define constants
-  val PingMessageType = "request.ping"
-  val PlayMessageType = "request.play"
-  val PongMessageType = "response.pong"
-
-  private val logger = LoggerFactory.getLogger(getClass)
+  private lazy val logger = LoggerFactory.getLogger(getClass)
 
   def websocketFlow: Flow[Message, Message, NotUsed] = {
+    // Define constants
+    val PingMessageType = "request.ping"
+    val PlayMessageType = "request.play"
+
     Flow[Message].mapConcat {
       case TextMessage.Strict(text) =>
         try {
           val json = text.parseJson.asJsObject
 
-          json.getFields("message_type") match {
-            case Seq(JsString(PlayMessageType)) =>
+          json.fields("message_type").convertTo[String] match {
+            case `PlayMessageType` =>
               val playMessage = json.convertTo[PlayMessage]
               // TODO: Handle play request
               Nil
-            case Seq(JsString(PingMessageType)) =>
+            case `PingMessageType` =>
               val pingMessage = json.convertTo[PingMessage]
               val pongMessage = PongMessage(pingMessage.id, pingMessage.timestamp, System.currentTimeMillis())
               logger.info(s"Pong message data: $pongMessage")
