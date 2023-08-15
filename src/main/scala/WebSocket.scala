@@ -73,13 +73,19 @@ object WebSocketServer extends App {
             case `PlayMessageType` =>
               val playMessage = json.convertTo[PlayMessage]
               logger.info(s"Play message data: $playMessage")
-              LuckyNumbersGame.play(playMessage.players).map { results =>
-                logger.info(s"Game results: $results")
 
+              val playResultsFuture = LuckyNumbersGame.play(playMessage.players)
+
+              playResultsFuture.onComplete {
+                case Success(results) => logger.info(s"Play results: $results")
+                case Failure(exception) => logger.error(s"Failed to get play results", exception)
+              }
+
+              playResultsFuture.map { results =>
                 val resultsMessage = ResultsMessage(
                   results.map(r => Result(r.position, r.player.id.toString, r.player.luckyNumber, r.result)).toList
                 )
-                
+
                 logger.info(s"Transformed results message: $resultsMessage")
 
                 val responseJson = JsObject(
@@ -88,7 +94,7 @@ object WebSocketServer extends App {
                     "results" -> resultsMessage.toJson
                   )
                 )
-                
+
                 logger.info(s"JSON response: ${responseJson.compactPrint}")
                 TextMessage(responseJson.compactPrint)
               }.recover {
