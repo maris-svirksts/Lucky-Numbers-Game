@@ -94,7 +94,7 @@ object WebSocketServer extends App {
               }.recover {
                 case e: Exception =>
                   logger.error(s"Error processing PlayMessageType: ", e)
-                  Future.successful(TextMessage("{}"))  // Send back an empty JSON as a failure response
+                  TextMessage("{}")  // Send back an empty JSON as a failure response
               }
             case `PingMessageType` =>
               val pingMessage = json.convertTo[PingMessage]
