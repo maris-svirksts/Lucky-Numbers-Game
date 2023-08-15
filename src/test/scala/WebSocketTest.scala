@@ -16,8 +16,9 @@ class WebSocketServerSpec extends AnyWordSpec with Matchers with ScalatestRouteT
   val route: Route = path("game") {
     handleWebSocketMessages(WebSocketServer.websocketFlow)
   }
+  val logger = LoggerFactory.getLogger(getClass)
 
-  "The WebSocketServer" must {
+  "The Web Server / PingPong" must {
     "respond with a pong message when receiving a ping message" in {
       // Create WebSocket client probe
       val wsClient = WSProbe()
@@ -29,7 +30,6 @@ class WebSocketServerSpec extends AnyWordSpec with Matchers with ScalatestRouteT
             val messageToSend = TextMessage(pingMessage.toJson.compactPrint)
 
             // Logging the sent message
-            val logger = LoggerFactory.getLogger(getClass)
             logger.info(s"Sending message: $messageToSend")
 
             wsClient.sendMessage(messageToSend)
@@ -45,6 +45,46 @@ class WebSocketServerSpec extends AnyWordSpec with Matchers with ScalatestRouteT
             }
         }
 
+    }
+  }
+
+  "The Web Server / Game" should {
+
+    "return correct results on Play request" in {
+      logger.info("Testing Play request...")
+
+      // Create WS probe
+      val wsClient = WSProbe()
+
+      // Start WS conversation
+      WS("/game", wsClient.flow) ~> WebSocketServer.route ~>
+      check {
+        // Send Play request
+        val playMessage = PlayMessage(3)
+        val playMessageJson = JsObject(
+          "message_type" -> JsString("request.play"),
+          "players" -> JsNumber(playMessage.players)
+        )
+  
+        wsClient.sendMessage(playMessageJson.compactPrint)
+        logger.debug(s"Sent message: ${playMessageJson.compactPrint}")
+
+        // Check response
+        wsClient.expectMessage() match {
+          case TextMessage.Strict(text) =>
+            val jsonResponse = text.parseJson.asJsObject
+            jsonResponse.fields("message_type") shouldBe JsString("response.results")
+            
+            val results = jsonResponse.fields("results").convertTo[List[Result]]
+            results should have size 3  // since we have 3 players
+            results.map(_.position) shouldBe List(1, 2, 3)  // should have distinct positions
+
+            logger.debug(s"Received response: $text")
+
+          case _ =>
+            fail("Received unexpected message type")
+        }
+      }
     }
   }
 }

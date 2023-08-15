@@ -65,36 +65,46 @@ object WebSocketServer extends App {
     val PingMessageType = "request.ping"
     val PlayMessageType = "request.play"
 
-    Flow[Message].mapConcat {
+    Flow[Message].mapAsync(1) {
       case TextMessage.Strict(text) =>
         try {
           val json = text.parseJson.asJsObject
-
           json.fields("message_type").convertTo[String] match {
             case `PlayMessageType` =>
               val playMessage = json.convertTo[PlayMessage]
-              // TODO: Handle play request
-              Nil
+              LuckyNumbersGame.play(playMessage.players).map { results =>
+                val resultsMessage = ResultsMessage(
+                  results.map(r => Result(r.position, r.player.id.toString, r.player.luckyNumber, r.result)).toList
+                )
+                val responseJson = JsObject(
+                  Map(
+                    "message_type" -> JsString("response.results"),
+                    "results" -> resultsMessage.toJson
+                  )
+                )
+                logger.info(s"Results message data: $responseJson")
+                TextMessage(responseJson.compactPrint)
+              }
             case `PingMessageType` =>
               val pingMessage = json.convertTo[PingMessage]
               val pongMessage = PongMessage(pingMessage.id, pingMessage.timestamp, System.currentTimeMillis())
               logger.info(s"Pong message data: $pongMessage")
-              List(TextMessage(pongMessage.toJson.compactPrint))
+              Future.successful(TextMessage(pongMessage.toJson.compactPrint))
             case _ =>
               logger.warn(s"Unknown message type: $text")
-              Nil
+              Future.successful(TextMessage("{}"))  // Send back an empty JSON
           }
         } catch {
           case e: spray.json.JsonParser.ParsingException =>
             logger.error(s"Could not parse message: $text", e)
-            Nil
+            Future.successful(TextMessage("{}"))  // Send back an empty JSON
         }
       case _: TextMessage.Streamed =>
         logger.warn("Received a Streamed TextMessage, ignoring it.")
-        Nil
+        Future.successful(TextMessage("{}"))  // Send back an empty JSON
       case _: BinaryMessage =>
         logger.warn("Received a BinaryMessage, ignoring it.")
-        Nil
+        Future.successful(TextMessage("{}"))  // Send back an empty JSON
     }
   }
 
