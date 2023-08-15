@@ -72,18 +72,29 @@ object WebSocketServer extends App {
           json.fields("message_type").convertTo[String] match {
             case `PlayMessageType` =>
               val playMessage = json.convertTo[PlayMessage]
+              logger.info(s"Play message data: $playMessage")
               LuckyNumbersGame.play(playMessage.players).map { results =>
+                logger.info(s"Game results: $results")
+
                 val resultsMessage = ResultsMessage(
                   results.map(r => Result(r.position, r.player.id.toString, r.player.luckyNumber, r.result)).toList
                 )
+                
+                logger.info(s"Transformed results message: $resultsMessage")
+
                 val responseJson = JsObject(
                   Map(
                     "message_type" -> JsString("response.results"),
                     "results" -> resultsMessage.toJson
                   )
                 )
-                logger.info(s"Results message data: $responseJson")
+                
+                logger.info(s"JSON response: ${responseJson.compactPrint}")
                 TextMessage(responseJson.compactPrint)
+              }.recover {
+                case e: Exception =>
+                  logger.error(s"Error processing PlayMessageType: ", e)
+                  Future.successful(TextMessage("{}"))  // Send back an empty JSON as a failure response
               }
             case `PingMessageType` =>
               val pingMessage = json.convertTo[PingMessage]
