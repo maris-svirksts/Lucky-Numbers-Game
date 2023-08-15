@@ -57,7 +57,7 @@ class WebSocketServerSpec extends AnyWordSpec with Matchers with ScalatestRouteT
       val wsClient = WSProbe()
 
       // Start WS conversation
-      WS("/game", wsClient.flow) ~> WebSocketServer.route ~>
+      WS("/game", wsClient.flow) ~> route ~>
       check {
         // Send Play request
         val playMessage = PlayMessage(3)
