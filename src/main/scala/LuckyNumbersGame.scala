@@ -41,35 +41,36 @@ object LuckyNumbersGame {
   }
 
   /**
+   * Filter winners based on bot's result, sort them by their result in descending order
+   * and assign them positions.
+   */
+  private def determineWinners(results: Seq[Results], botResult: Int): Seq[Results] = {
+    val winners = results.filter(_.result > botResult)
+    logger.info(s"Winners filtered: $winners")
+
+    val sortedWinners = winners.sortBy(-_.result)
+    logger.info(s"Winners sorted: $sortedWinners")
+
+    sortedWinners.zipWithIndex.map { case (result, index) => result.copy(position = index + 1) }
+  }
+
+  /**
    * Play the game with a specific number of players.
-   * Filter out the winners who have a result greater than the bot's result.
-   * Assign positions to the winners and return the results.
    */
   def play(numberOfPlayers: Int): Future[Seq[Results]] = {
     require(numberOfPlayers > 0, "Number of players must be greater than 0")
-    
     logger.info(s"Starting play function for $numberOfPlayers players")
-    
+
     for {
       results <- addPlayersWithResults(numberOfPlayers)
       _ = logger.info(s"Results for players obtained: $results")
-      
+
       botResult <- addPlayersWithResults(1).map(_.head.result)
       _ = logger.info(s"Bot result obtained: $botResult")
-    } yield {
-      logger.info("Filtering winners based on bot result")
-      val winners = results.filter(_.result > botResult)
-      
-      logger.info(s"Winners filtered: $winners")
-      
-      val sortedWinners = winners.sortBy(-_.result)
-      logger.info(s"Winners sorted: $sortedWinners")
-      
-      val finalResults = sortedWinners.zipWithIndex.map { case (result, index) => result.copy(position = index + 1) }
-      
-      logger.info(s"Final results: $finalResults")
-      
-      finalResults
-    }
+
+      finalResults = determineWinners(results, botResult)
+      _ = logger.info(s"Final results: $finalResults")
+
+    } yield finalResults
   }
 }
