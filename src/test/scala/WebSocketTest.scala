@@ -86,5 +86,26 @@ class WebSocketServerSpec extends AnyWordSpec with Matchers with ScalatestRouteT
         }
       }
     }
+
+    "return empty results for zero players" in {
+      val wsClient = WSProbe()
+
+      WS("/game", wsClient.flow) ~> route ~>
+        check {
+          val playMessage = PlayMessage(0)
+          val playMessageJson = JsObject(
+            "message_type" -> JsString("request.play"),
+            "players" -> JsNumber(playMessage.players)
+          )
+
+          wsClient.sendMessage(playMessageJson.compactPrint)
+          val response = wsClient.expectMessage()
+          response.isText shouldBe true
+
+          val jsonResponse = response.asTextMessage.getStrictText.parseJson.asJsObject
+          jsonResponse.fields("message_type") shouldBe JsString("response.results")
+          jsonResponse.fields("results").convertTo[List[Result]] shouldBe empty
+        }
+    }
   }
 }
