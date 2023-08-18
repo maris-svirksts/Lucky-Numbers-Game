@@ -67,7 +67,7 @@ object WebSocketServer extends App {
       case TextMessage.Strict(text) =>
         try {
           val json = text.parseJson.asJsObject
-          json.fields("message_type").convertTo[String] match {
+          json.fields.getOrElse("message_type", JsString("")).convertTo[String] match {
             case `PlayMessageType` =>
               val playMessage = json.convertTo[PlayMessage]
               logger.info(s"Play message data: $playMessage")

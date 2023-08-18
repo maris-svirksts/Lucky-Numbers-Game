@@ -9,7 +9,6 @@ import spray.json._
 import JsonFormats._
 import org.slf4j.LoggerFactory
 
-
 class WebSocketServerSpec extends AnyWordSpec with Matchers with ScalatestRouteTest {
 
   // Define your WebSocket route
@@ -24,32 +23,29 @@ class WebSocketServerSpec extends AnyWordSpec with Matchers with ScalatestRouteT
       val wsClient = WSProbe()
 
       // WS creates a WebSocket request for testing
-        WS("/game", wsClient.flow) ~> route ~>
-        check {
-            val pingMessage = PingMessage(id = 1, System.currentTimeMillis())
-            val messageToSend = TextMessage(pingMessage.toJson.compactPrint)
+      WS("/game", wsClient.flow) ~> route ~>
+      check {
+          val pingMessage = PingMessage(id = 1, System.currentTimeMillis())
+          val messageToSend = TextMessage(pingMessage.toJson.compactPrint)
 
-            // Logging the sent message
-            logger.info(s"Sending message: $messageToSend")
+          // Logging the sent message
+          logger.info(s"Sending message: $messageToSend")
 
-            wsClient.sendMessage(messageToSend)
-            wsClient.expectMessage() match {
-            case TextMessage.Strict(text) =>
-                logger.info(s"Received message: $text")
-                val receivedPong = text.parseJson.convertTo[PongMessage]
+          wsClient.sendMessage(messageToSend)
+          wsClient.expectMessage() match {
+          case TextMessage.Strict(text) =>
+              logger.info(s"Received message: $text")
+              val receivedPong = text.parseJson.convertTo[PongMessage]
+              receivedPong.requestId shouldBe pingMessage.id
 
-                receivedPong.requestId shouldBe pingMessage.id
-
-            case other =>
-                fail(s"Unexpected message type received: $other")
-            }
-        }
-
+          case other =>
+              fail(s"Unexpected message type received: $other")
+          }
+      }
     }
   }
 
   "The Web Server / Game" should {
-
     "return correct results on Play request" in {
       logger.info("Testing Play request...")
 
@@ -65,7 +61,7 @@ class WebSocketServerSpec extends AnyWordSpec with Matchers with ScalatestRouteT
           "message_type" -> JsString("request.play"),
           "players" -> JsNumber(playMessage.players)
         )
-  
+
         wsClient.sendMessage(playMessageJson.compactPrint)
         logger.debug(s"Sent message: ${playMessageJson.compactPrint}")
 
@@ -73,13 +69,20 @@ class WebSocketServerSpec extends AnyWordSpec with Matchers with ScalatestRouteT
         wsClient.expectMessage() match {
           case TextMessage.Strict(text) =>
             val jsonResponse = text.parseJson.asJsObject
-            jsonResponse.fields("message_type") shouldBe JsString("response.results")
-            
-            val results = jsonResponse.fields("results").convertTo[List[Result]]
-            results should have size 3  // since we have 3 players
-            results.map(_.position) shouldBe List(1, 2, 3)  // should have distinct positions
+            jsonResponse.fields.get("message_type") match {
+              case Some(JsString("response.results")) => 
+                val results = jsonResponse.fields("results").convertTo[List[Result]]
+                results should have size 3  // since we have 3 players
+                results.map(_.position) shouldBe List(1, 2, 3)  // should have distinct positions
 
-            logger.debug(s"Received response: $text")
+                logger.debug(s"Received response: $text")
+
+              case Some(other) => 
+                fail(s"Unexpected message_type value: $other")
+
+              case None => 
+                fail("message_type key not found in the response")
+            }
 
           case _ =>
             fail("Received unexpected message type")
@@ -91,21 +94,29 @@ class WebSocketServerSpec extends AnyWordSpec with Matchers with ScalatestRouteT
       val wsClient = WSProbe()
 
       WS("/game", wsClient.flow) ~> route ~>
-        check {
-          val playMessage = PlayMessage(0)
-          val playMessageJson = JsObject(
-            "message_type" -> JsString("request.play"),
-            "players" -> JsNumber(playMessage.players)
-          )
+      check {
+        val playMessage = PlayMessage(0)
+        val playMessageJson = JsObject(
+          "message_type" -> JsString("request.play"),
+          "players" -> JsNumber(playMessage.players)
+        )
 
-          wsClient.sendMessage(playMessageJson.compactPrint)
-          val response = wsClient.expectMessage()
-          response.isText shouldBe true
+        wsClient.sendMessage(playMessageJson.compactPrint)
+        val response = wsClient.expectMessage()
+        response.isText shouldBe true
 
-          val jsonResponse = response.asTextMessage.getStrictText.parseJson.asJsObject
-          jsonResponse.fields("message_type") shouldBe JsString("response.results")
-          jsonResponse.fields("results").convertTo[List[Result]] shouldBe empty
+        val jsonResponse = response.asTextMessage.getStrictText.parseJson.asJsObject
+        jsonResponse.fields.get("message_type") match {
+          case Some(JsString("response.results")) => 
+            jsonResponse.fields("results").convertTo[List[Result]] shouldBe empty
+
+          case Some(other) => 
+            fail(s"Unexpected message_type value: $other")
+
+          case None => 
+            fail("message_type key not found in the response")
         }
+      }
     }
   }
 }
