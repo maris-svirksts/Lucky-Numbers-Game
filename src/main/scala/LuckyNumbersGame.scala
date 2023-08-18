@@ -1,6 +1,6 @@
-import scala.util.Random
-import scala.concurrent.{Future, ExecutionContext}
-import ExecutionContext.Implicits.global
+import scala.util.{Random, Try, Failure, Success}
+import scala.concurrent.{Future}
+import scala.concurrent.ExecutionContext.Implicits.global
 import org.slf4j.LoggerFactory
 
 object LuckyNumbersGame {
@@ -9,7 +9,6 @@ object LuckyNumbersGame {
   private val logger = LoggerFactory.getLogger(getClass)
 
   case class Player(id: Int, luckyNumber: Int)
-
   case class Results(player: Player, result: Int, position: Int = 0)
 
   def generateRandomNumber(): Int = Random.nextInt(MaxRandomNumber)
@@ -31,11 +30,16 @@ object LuckyNumbersGame {
    */
   def addPlayersWithResults(numberOfPlayers: Int): Future[Seq[Results]] = {
     require(numberOfPlayers > 0, "Number of players must be greater than 0")
+
     Future.traverse((1 to numberOfPlayers).toList) { playerId =>
       Future {
         val player = Player(playerId, generateRandomNumber())
         val result = calculateResult(player.luckyNumber)
         Results(player, result)
+      }.recover {
+        case e: Exception =>
+          logger.error("Failed to generate results for player", e)
+          Results(Player(playerId, 0), 0)
       }
     }
   }
@@ -72,5 +76,9 @@ object LuckyNumbersGame {
       _ = logger.info(s"Final results: $finalResults")
 
     } yield finalResults
+  }.recover {
+    case e: Exception =>
+      logger.error("Error during the game play", e)
+      Seq.empty[Results]
   }
 }

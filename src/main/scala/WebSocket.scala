@@ -15,7 +15,6 @@ import scala.concurrent.duration._
 case class PlayMessage(players: Int)
 case class Result(position: Int, player: String, number: Int, result: Int)
 case class ResultsMessage(results: List[Result])
-
 case class PingMessage(id: Int, timestamp: Long) {
   def toJson: JsValue = {
     val jsonMap = Map(
@@ -45,7 +44,6 @@ object JsonFormats extends DefaultJsonProtocol {
   implicit val playFormat = jsonFormat1(PlayMessage)
   implicit val resultFormat = jsonFormat4(Result)
   implicit val resultsFormat = jsonFormat1(ResultsMessage)
-
   implicit val pongFormat = jsonFormat(
     { (request_id: Int, request_at: Long, timestamp: Long) => PongMessage(request_id, request_at, timestamp) },
     "request_id", "request_at", "timestamp"
@@ -124,6 +122,11 @@ object WebSocketServer extends App {
         logger.warn("Received a BinaryMessage, ignoring it.")
         Future.successful(TextMessage("""{"status": "error", "message": "BinaryMessage not supported"}"""))
     }
+    .recover {
+      case e: Exception =>
+        logger.error(s"Unexpected error processing message", e)
+        TextMessage("""{"status": "error", "message": "Unexpected server error"}""")
+    }
   }
 
   val route = path("game") {
@@ -131,9 +134,10 @@ object WebSocketServer extends App {
   }
 
   val server = Http().newServerAt("localhost", 8080).bind(route)
+
   server.onComplete {
     case Success(_) =>
-      logger.info("Successfully started on localhost:8080 ")
+      logger.info("Successfully started on localhost:8080")
     case Failure(ex) =>
       logger.error(s"Failed to start the server due to: ${ex.getMessage}", ex)
   }
@@ -142,13 +146,15 @@ object WebSocketServer extends App {
   scala.sys.addShutdownHook {
     logger.info("Shutting down server...")
     
-    // Unbind the server and stop accepting new connections
-    server.flatMap(_.unbind()).onComplete(_ => logger.info("Server unbound."))
+    server.flatMap(_.unbind()).onComplete {
+      case Success(_) => logger.info("Server unbound.")
+      case Failure(e) => logger.error(s"Error unbinding the server: ${e.getMessage}", e)
+    }
     
-    // Terminate the actor system, waiting for any running actors to finish
     val termination = system.terminate()
-    Await.result(termination, 30.seconds)
-
-    logger.info("Server shutdown complete.")
+    termination.onComplete {
+      case Success(_) => logger.info("Server shutdown complete.")
+      case Failure(e) => logger.error(s"Error during system termination: ${e.getMessage}", e)
+    }
   }
 }
