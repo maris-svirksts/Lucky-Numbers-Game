@@ -81,7 +81,7 @@ class WebSocketServerSpec extends AnyWordSpec with Matchers with ScalatestRouteT
                 fail(s"Unexpected message_type value: $other")
 
               case None => 
-                fail("message_type key not found in the response")
+                fail(s"message_type key not found in the response: $jsonResponse")
             }
 
           case _ =>
@@ -114,7 +114,7 @@ class WebSocketServerSpec extends AnyWordSpec with Matchers with ScalatestRouteT
             fail(s"Unexpected message_type value: $other")
 
           case None => 
-            fail("message_type key not found in the response")
+            fail(s"message_type key not found in the response: $jsonResponse")
         }
       }
     }
