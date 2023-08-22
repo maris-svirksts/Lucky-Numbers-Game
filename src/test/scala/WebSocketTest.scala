@@ -90,7 +90,7 @@ class WebSocketServerSpec extends AnyWordSpec with Matchers with ScalatestRouteT
       }
     }
 
-    "return empty results for zero players" in {
+    "return an error for zero players" in {
       val wsClient = WSProbe()
 
       WS("/game", wsClient.flow) ~> route ~>
@@ -107,8 +107,10 @@ class WebSocketServerSpec extends AnyWordSpec with Matchers with ScalatestRouteT
 
         val jsonResponse = response.asTextMessage.getStrictText.parseJson.asJsObject
         jsonResponse.fields.get("message_type") match {
-          case Some(JsString("response.results")) => 
-            jsonResponse.fields("results").convertTo[List[Result]] shouldBe empty
+          case Some(JsString("response.error")) =>
+            // Expect a specific error message in the case of zero players.
+            val errorMessage = jsonResponse.fields("message").convertTo[String]
+            errorMessage should include("Number of players must be greater than 0")
 
           case Some(other) => 
             fail(s"Unexpected message_type value: $other")

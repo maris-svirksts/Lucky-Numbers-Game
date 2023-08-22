@@ -107,25 +107,25 @@ object WebSocketServer extends App {
               Future.successful(TextMessage(pongMessage.toJson.compactPrint))
             case _ =>
               logger.warn(s"Unknown message type: $text")
-              Future.successful(TextMessage("""{"status": "error", "message": "Unknown message type"}"""))  // Enhanced error message
+              Future.successful(TextMessage("""{"message_type": "response.error", "message": "Unknown message type"}"""))  // Enhanced error message
           }
         } catch {
           case e: spray.json.JsonParser.ParsingException =>
             logger.error(s"Could not parse message: $text", e)
-            Future.successful(TextMessage("""{"status": "error", "message": "Invalid JSON format"}"""))  // Enhanced error message
+            Future.successful(TextMessage("""{"message_type": "response.error", "message": "Invalid JSON format"}"""))  // Enhanced error message
         }
       case _: TextMessage.Streamed =>
         logger.warn("Received a Streamed TextMessage, ignoring it.")
-        Future.successful(TextMessage("""{"status": "error", "message": "Streamed TextMessage not supported"}"""))
+        Future.successful(TextMessage("""{"message_type": "response.error", "message": "Streamed TextMessage not supported"}"""))
 
       case _: BinaryMessage =>
         logger.warn("Received a BinaryMessage, ignoring it.")
-        Future.successful(TextMessage("""{"status": "error", "message": "BinaryMessage not supported"}"""))
+        Future.successful(TextMessage("""{"message_type": "response.error", "message": "BinaryMessage not supported"}"""))
     }
     .recover {
       case e: Exception =>
         logger.error(s"Unexpected error processing message", e)
-        TextMessage("""{"status": "error", "message": "Unexpected server error"}""")
+        TextMessage(s"""{"message_type": "response.error", "message": "$e"}""")
     }
   }
 
