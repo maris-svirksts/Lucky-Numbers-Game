@@ -1,4 +1,4 @@
-import scala.util.{Random, Try, Failure, Success}
+import scala.util.{Random}
 import scala.concurrent.{Future}
 import scala.concurrent.ExecutionContext.Implicits.global
 import org.slf4j.LoggerFactory
@@ -6,7 +6,7 @@ import org.slf4j.LoggerFactory
 object LuckyNumbersGame {
 
   val MaxRandomNumber: Int = 1000000
-  private val logger = LoggerFactory.getLogger(getClass)
+  private lazy val logger = LoggerFactory.getLogger(getClass)
 
   case class Player(id: Int, luckyNumber: Int)
   case class Results(player: Player, result: Int, position: Int = 0)
@@ -18,10 +18,12 @@ object LuckyNumbersGame {
    * For each digit in the lucky number, calculate the result as 10^(occurrences-1) * digit and sum them all up.
    */
   def calculateResult(luckyNumber: Int): Int = {
-    val occurrences = luckyNumber.toString.groupBy(identity).mapValues(_.length)
-    occurrences.map {
-      case (digit, counter) => Math.pow(10, counter - 1).toInt * digit.asDigit
-    }.sum
+    Option(luckyNumber).map { num =>
+      val occurrences = num.toString.groupBy(identity).mapValues(_.length)
+      occurrences.map {
+        case (digit, counter) => Math.pow(10, counter - 1).toInt * digit.asDigit
+      }.sum
+    }.getOrElse(0)
   }
 
   /**
@@ -37,8 +39,8 @@ object LuckyNumbersGame {
         val result = calculateResult(player.luckyNumber)
         Results(player, result)
       }.recover {
-        case e: Exception =>
-          logger.error("Failed to generate results for player", e)
+        case e: Throwable => 
+          logger.error(s"Failed to generate results for player $playerId", e)
           Results(Player(playerId, 0), 0)
       }
     }
@@ -51,10 +53,10 @@ object LuckyNumbersGame {
   private def determineWinners(results: Seq[Results], botResult: Int): Seq[Results] = {
     val winners = results.filter(_.result > botResult)
     logger.info(s"Winners filtered: $winners")
-
+    
     val sortedWinners = winners.sortBy(-_.result)
     logger.info(s"Winners sorted: $sortedWinners")
-
+    
     sortedWinners.zipWithIndex.map { case (result, index) => result.copy(position = index + 1) }
   }
 
@@ -68,16 +70,13 @@ object LuckyNumbersGame {
     for {
       results <- addPlayersWithResults(numberOfPlayers)
       _ = logger.info(s"Results for players obtained: $results")
-
-      botResult <- addPlayersWithResults(1).map(_.head.result)
+      botResult <- addPlayersWithResults(1).map(_.headOption.map(_.result).getOrElse(0))
       _ = logger.info(s"Bot result obtained: $botResult")
-
       finalResults = determineWinners(results, botResult)
       _ = logger.info(s"Final results: $finalResults")
-
     } yield finalResults
   }.recover {
-    case e: Exception =>
+    case e: Throwable => 
       logger.error("Error during the game play", e)
       Seq.empty[Results]
   }
