@@ -14,27 +14,25 @@ import scala.concurrent.duration._
 // Data structures
 case class PlayMessage(players: Int)
 case class Result(position: Int, player: String, number: Int, result: Int)
-case class ResultsMessage(results: List[Result])
+case class ResultsMessage(message_type: String = "response.results", results: List[Result])
 case class PingMessage(id: Int, timestamp: Long) {
   def toJson: JsValue = {
-    val jsonMap = Map(
+    JsObject(
       "message_type" -> JsString("request.ping"),
       "id" -> JsNumber(id),
       "timestamp" -> JsNumber(timestamp)
     )
-    JsObject(jsonMap)
   }
 }
 
 case class PongMessage(requestId: Int, requestAt: Long, timestamp: Long) {
   def toJson: JsValue = {
-    val jsonMap = Map(
+    JsObject(
       "message_type" -> JsString("response.pong"),
       "request_id" -> JsNumber(requestId),
       "request_at" -> JsNumber(requestAt),
       "timestamp" -> JsNumber(timestamp)
     )
-    JsObject(jsonMap)
   }
 }
 
@@ -43,7 +41,7 @@ object JsonFormats extends DefaultJsonProtocol {
   implicit val pingFormat = jsonFormat2(PingMessage)
   implicit val playFormat = jsonFormat1(PlayMessage)
   implicit val resultFormat = jsonFormat4(Result)
-  implicit val resultsFormat = jsonFormat1(ResultsMessage)
+  implicit val resultsFormat = jsonFormat2(ResultsMessage)
   implicit val pongFormat = jsonFormat(
     { (request_id: Int, request_at: Long, timestamp: Long) => PongMessage(request_id, request_at, timestamp) },
     "request_id", "request_at", "timestamp"
@@ -53,8 +51,8 @@ object JsonFormats extends DefaultJsonProtocol {
 import JsonFormats._
 
 object WebSocketServer extends App {
-  implicit val system: ActorSystem = ActorSystem("WebSocketServer")
-  implicit val executionContext: ExecutionContextExecutor = system.dispatcher
+  implicit lazy val system: ActorSystem = ActorSystem("WebSocketServer")
+  implicit lazy val executionContext: ExecutionContextExecutor = system.dispatcher
 
   private lazy val logger = LoggerFactory.getLogger(getClass)
 
@@ -81,6 +79,7 @@ object WebSocketServer extends App {
 
               playResultsFuture.map { results =>
                 val resultsMessage = ResultsMessage(
+                  "response.results",
                   results.map(r => Result(r.position, r.player.id.toString, r.player.luckyNumber, r.result)).toList
                 )
 
@@ -89,7 +88,7 @@ object WebSocketServer extends App {
                 val responseJson = JsObject(
                   Map(
                     "message_type" -> JsString("response.results"),
-                    "results" -> resultsMessage.toJson
+                    "results" -> resultsMessage.results.toJson
                   )
                 )
 
