@@ -1,15 +1,12 @@
 import akka.{Done, NotUsed}
 import akka.actor.ActorSystem
-import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.ws.{Message, TextMessage, BinaryMessage}
-import akka.http.scaladsl.server.Directives._
-import akka.stream.scaladsl.{Flow, Sink, Source}
+import akka.stream.scaladsl.{Flow}
 import spray.json._
-import scala.concurrent.{ExecutionContextExecutor, Future, Await}
+import scala.concurrent.{ExecutionContextExecutor, Future}
 import LuckyNumbersGame._
 import scala.util.{Failure, Success}
 import org.slf4j.LoggerFactory
-import scala.concurrent.duration._
 
 // Data structures
 case class PlayMessage(players: Int)
