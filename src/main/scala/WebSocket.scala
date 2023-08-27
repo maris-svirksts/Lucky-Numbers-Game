@@ -127,33 +127,4 @@ object WebSocketServer extends App {
         TextMessage(s"""{"message_type": "response.error", "message": "$e"}""")
     }
   }
-
-  val route = path("game") {
-    handleWebSocketMessages(websocketFlow)
-  }
-
-  val server = Http().newServerAt("localhost", 8080).bind(route)
-
-  server.onComplete {
-    case Success(_) =>
-      logger.info("Successfully started on localhost:8080")
-    case Failure(ex) =>
-      logger.error(s"Failed to start the server due to: ${ex.getMessage}", ex)
-  }
-
-  // Trap termination signals to trigger shutdown
-  scala.sys.addShutdownHook {
-    logger.info("Shutting down server...")
-    
-    server.flatMap(_.unbind()).onComplete {
-      case Success(_) => logger.info("Server unbound.")
-      case Failure(e) => logger.error(s"Error unbinding the server: ${e.getMessage}", e)
-    }
-    
-    val termination = system.terminate()
-    termination.onComplete {
-      case Success(_) => logger.info("Server shutdown complete.")
-      case Failure(e) => logger.error(s"Error during system termination: ${e.getMessage}", e)
-    }
-  }
 }
