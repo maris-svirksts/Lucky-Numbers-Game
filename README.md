@@ -1,38 +1,52 @@
 # Lucky Numbers Game
 
-This project is a simple game implemented using Akka Framework and Scala.
-
-NOTE: This is NOT a full solution, I'll continue playing around with it. Publishing it in this state since I promised Anna Orlova that I'll get something done for her this week. And, as I already told Stanislav Kursish, my Scala is rusty, haven't worked on anything in two years, so, the amount of time I had available this week was not enough to finish everything.
-
-## TODO
-
-- Write tests for WebSocket functionality.
-- Implement `request.play` functionality.
-- Implement `response.results` functionality.
-- Provide a list of winners based on their game results.
-- Clean up and polish the overal results: divide into multiple files, add comments etc.
-
+**Lucky Numbers Game** is a competitive game where players and a bot each receive a random number. The game then counts occurrences of each digit in the number and determines a result for each participant. The primary objective is to compete against the bot and other players to achieve the best score. This project leverages the **Akka Framework** and **Scala** for seamless backend operations and real-time updates.
 
 ## Overview
 
-The game includes the following functionality:
+The game comprises the following features:
 
-- Generates a random number for each player and a bot player.
-- Counts occurrences of each digit in the given number and calculates a game result for each player.
-- Provides a list of winners based on their game results.
+- **Random Number Generation**: Each participant, including a bot player, gets a unique number.
+  
+- **Score Calculation**: The game evaluates occurrences of each digit in the assigned number and computes a score for each player.
+  
+- **Winner Declaration**: Based on individual scores, the game provides a list of winners.
 
-The game uses WebSocket communication for handling game logic:
+For real-time interaction and updates, the game utilizes **WebSocket** communication. For those unfamiliar with WebSockets, they offer a persistent connection between the client and server, enabling real-time data exchanges. You can read more about WebSockets [here](https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API). 
 
-- `request.play` message that initiates the game.
-- `response.results` message that provides the game results.
-- `request.ping` / `response.pong` messages for latency check.
+The WebSocket communication handles the game logic through the following messages:
 
-## How to Run
+- `request.play`: Initiates the game.
+- `response.results`: Provides the game results.
+- `request.ping` / `response.pong`: Used for latency checks.
 
-1. Ensure you have sbt and Scala installed.
-2. Run `sbt run` in the terminal.
-3. The application will start on `localhost:8080`.
+## Getting Started
 
-## How to Test
+### Prerequisites
 
-1. Run `sbt test` in the terminal.
+Ensure you have the following software installed:
+- **sbt**
+- **Scala**
+
+If you don't have them installed, follow the installation guide for [sbt](https://www.scala-sbt.org/download.html) and [Scala](https://scala-lang.org/download/).
+
+### How to Run
+
+1. Open your terminal.
+2. Navigate to the project directory.
+3. Enter the command `sbt run`.
+
+### How to Test
+
+To run all tests:
+1. Open your terminal.
+2. Navigate to the project directory.
+3. Enter the command `sbt test`.
+
+For running specific tests, use the test-only command followed by the test class name.
+
+## TODO
+
+- Improve existing tests: separate setup and logic better.
+- Write additional tests.
+- Clean up and polish the overal results: divide into multiple files, add, comments etc.
