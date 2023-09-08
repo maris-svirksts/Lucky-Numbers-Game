@@ -8,10 +8,20 @@ object LuckyNumbersGame {
   val MaxRandomNumber: Int = 1000000
   private lazy val logger = LoggerFactory.getLogger(getClass)
 
+  trait NumberGenerator {
+    def generateNumber(): Int
+  }
+
+  class RandomNumberGenerator extends NumberGenerator {
+    override def generateNumber(): Int = Random.nextInt(MaxRandomNumber)
+  }
+
+  class PredefinedNumberGenerator(numbers: Iterator[Int]) extends NumberGenerator {
+    override def generateNumber(): Int = numbers.next()
+  }
+
   case class Player(id: Int, luckyNumber: Int)
   case class Results(player: Player, result: Int, position: Int = 0)
-
-  def generateRandomNumber(): Int = Random.nextInt(MaxRandomNumber)
 
   /**
    * Calculate a result based on a lucky number.
@@ -30,12 +40,12 @@ object LuckyNumbersGame {
    * Add players and their corresponding results.
    * For each player, generate a random lucky number and calculate the result.
    */
-  def addPlayersWithResults(numberOfPlayers: Int): Future[Seq[Results]] = {
+  def addPlayersWithResults(numberOfPlayers: Int, numberGenerator: NumberGenerator = new RandomNumberGenerator): Future[Seq[Results]] = {
     require(numberOfPlayers > 0, "Number of players must be greater than 0")
 
     Future.traverse((1 to numberOfPlayers).toList) { playerId =>
       Future {
-        val player = Player(playerId, generateRandomNumber())
+        val player = Player(playerId, numberGenerator.generateNumber())
         val result = calculateResult(player.luckyNumber)
         Results(player, result)
       }.recover {
@@ -63,14 +73,14 @@ object LuckyNumbersGame {
   /**
    * Play the game with a specific number of players.
    */
-  def play(numberOfPlayers: Int): Future[Seq[Results]] = {
+def play(numberOfPlayers: Int, playerNumberGenerator: NumberGenerator = new RandomNumberGenerator, botNumberGenerator: NumberGenerator = new RandomNumberGenerator): Future[Seq[Results]] = {
     require(numberOfPlayers > 0, "Number of players must be greater than 0")
     logger.info(s"Starting play function for $numberOfPlayers players")
 
     for {
-      results <- addPlayersWithResults(numberOfPlayers)
+      results <- addPlayersWithResults(numberOfPlayers, playerNumberGenerator)
       _ = logger.info(s"Results for players obtained: $results")
-      botResult <- addPlayersWithResults(1).map(_.headOption.map(_.result).getOrElse(0))
+      botResult <- addPlayersWithResults(1, botNumberGenerator).map(_.headOption.map(_.result).getOrElse(0))
       _ = logger.info(s"Bot result obtained: $botResult")
       finalResults = determineWinners(results, botResult)
       _ = logger.info(s"Final results: $finalResults")
