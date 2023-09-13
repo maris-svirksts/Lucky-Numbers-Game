@@ -29,7 +29,7 @@ object LuckyNumbersGame {
    */
   def calculateResult(luckyNumber: Int): Int = {
     Option(luckyNumber).map { num =>
-      val occurrences = num.toString.groupBy(identity).mapValues(_.length)
+      val occurrences = num.toString.groupBy(identity).view.mapValues(_.length)
       occurrences.map {
         case (digit, counter) => Math.pow(10, counter - 1).toInt * digit.asDigit
       }.sum
