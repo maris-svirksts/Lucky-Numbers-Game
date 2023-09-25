@@ -38,15 +38,30 @@ If you don't have them installed, follow the installation guide for [sbt](https:
 
 ### How to Test
 
+#### Running Tests
+
 To run all tests:
 1. Open your terminal.
 2. Navigate to the project directory.
 3. Enter the command `sbt test`.
 
-For running specific tests, use the test-only command followed by the test class name.
+For running specific tests, use the `test-only` command followed by the test class name.
+
+#### Code Coverage
+
+This project includes code coverage tests through [sbt-scoverage](https://github.com/scoverage/sbt-scoverage). To generate a code coverage report, follow these steps:
+
+1. Open your terminal.
+2. Navigate to the project directory.
+3. Enter the command `sbt coverage test`.
+4. After tests complete, you can generate the coverage report by running `sbt coverageReport`.
+
+The code coverage reports will be generated in the `<project-directory>/target/scala-2.xx/scoverage-report/` directory.
+
+The minimum code coverage is set to 80%.
 
 ## TODO
 
 - Improve existing tests: separate setup and logic better.
 - Write additional tests.
-- Clean up and polish the overal results: divide into multiple files, add, comments etc.
+- Clean up and polish the overall results: divide into multiple files, add comments, etc.

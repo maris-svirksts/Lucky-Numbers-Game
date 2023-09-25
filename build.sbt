@@ -4,6 +4,14 @@ version := "0.1"
 scalaVersion := "2.13.6"
 scalacOptions += "-deprecation"
 
+coverageFailOnMinimum := true
+coverageMinimumStmtTotal := 80
+coverageMinimumBranchTotal := 80
+coverageMinimumStmtPerPackage := 80
+coverageMinimumBranchPerPackage := 80
+coverageMinimumStmtPerFile := 80
+coverageMinimumBranchPerFile := 80
+
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.16" % Test
 libraryDependencies += "org.scala-lang.modules" %% "scala-parallel-collections" % "1.0.0"
 libraryDependencies ++= Seq( 
