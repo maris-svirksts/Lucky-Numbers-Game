@@ -1,3 +1,4 @@
+import scala.concurrent.Future
 import org.scalatest.funsuite.AsyncFunSuite
 import org.scalatest.matchers.should.Matchers
 
@@ -61,6 +62,47 @@ class LuckyNumbersGameTest extends AsyncFunSuite with Matchers {
 
       results(3).result shouldBe 200000
       results(3).position shouldBe 4
+    }
+  }
+
+  test("calculateResult should return 0 for invalid numbers") {
+    LuckyNumbersGame.calculateResult(-1) shouldBe 0
+  }
+  
+  test("addPlayersWithResults should handle exceptions gracefully") {
+    val faultyNumberGenerator = new LuckyNumbersGame.NumberGenerator {
+      override def generateNumber(): Int = throw new RuntimeException("Test Exception")
+    }
+    
+    LuckyNumbersGame.addPlayersWithResults(2, faultyNumberGenerator).map { results =>
+      results should have length 2
+      results.forall(_.result == 0) shouldBe true
+    }
+  }
+
+  test("addPlayersWithResults should throw an exception for number of players <= 0") {
+    recoverToSucceededIf[IllegalArgumentException] {
+      Future {
+        LuckyNumbersGame.addPlayersWithResults(0)
+      }
+    }
+  }
+
+  test("play should throw an exception for number of players <= 0") {
+    recoverToSucceededIf[IllegalArgumentException] {
+      Future {
+        LuckyNumbersGame.play(0)
+      }
+    }
+  }
+
+  test("play should return an empty sequence when an exception is thrown") {
+    val faultyNumberGenerator = new LuckyNumbersGame.NumberGenerator {
+      override def generateNumber(): Int = throw new Exception("An exception occurred")
+    }
+
+    LuckyNumbersGame.play(5, faultyNumberGenerator, faultyNumberGenerator).map { results =>
+      results shouldBe Seq.empty[LuckyNumbersGame.Results]
     }
   }
 }
